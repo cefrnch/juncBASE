@@ -10,6 +10,9 @@
 
 It will also return a file containing the entropy score for all junctions and
 the offset positions for every read along with the entropy.
+
+modified by Courtney French (cefrnch@gmail.com) #CEF:
+8/26/15 - also print a file with read counts for each junction
 """
 
 import sys
@@ -108,6 +111,7 @@ def main():
 
     output_file = open(output_name + "_entropy_scores.txt", "w")
     offset_file = open(output_name + "_entropy_offset.txt", "w")
+    counts_file = open(output_name + "_read_counts.txt", "w")            # CEF 
 
     entropy_scores = []    
     if known_junctions:
@@ -122,12 +126,14 @@ def main():
 #        all_entropies.append(entropy)
         if known_junctions:
             output_file.write("%s\t%.3f\t%s\n" % (jcn, entropy, jcn2type[jcn]))
+            counts_file.write("%s\t%.3f\t%s\n" % (jcn, totalCount, jcn2type[jcn]))     # CEF
             if jcn2type[jcn] == "N":
                 novel_entropy_scores.append(jcn2type[jcn])
             else:
                 entropy_scores.append(jcn2type[jcn])
         else:
             output_file.write("%s\t%.3f\n" % (jcn, entropy))
+            counts_file.write("%s\t%.3f\n" % (jcn, totalCount))      # CEF
 
         for upstr_overhang in jcn2JcnInfoDict[jcn].block_list:
             if known_junctions:
@@ -141,8 +147,29 @@ def main():
     # Create entropy score distribution
     fig = plt.figure()
     
-    plt.hist(numpy.array(entropy_scores), 
-             bins=20,
+    ## CEF changed around a bit so that if known_junctions, legend is correct ##
+
+    if known_junctions:
+        plt.hist(numpy.array(entropy_scores), 
+             bins=100,
+             range=[0,10],
+             histtype='stepfilled',
+             normed=True,
+             color = 'b',
+             alpha = 0.25,
+             label="known junction entropy")
+        plt.hist(numpy.array(novel_entropy_scores), 
+                 bins=100,
+                 range=[0,10],
+                 histtype='stepfilled',
+                 normed=True,
+                 color = 'r',
+                 alpha = 0.25,
+                 label="novel junction entropy")
+
+    else:
+        plt.hist(numpy.array(entropy_scores), 
+             bins=100,
              range=[0,10],
              histtype='stepfilled',
              normed=True,
@@ -150,18 +177,8 @@ def main():
              alpha = 0.25,
              label="junction entropy")
 
-    if known_junctions:
-        plt.hist(numpy.array(novel_entropy_scores), 
-                 bins=20,
-                 range=[0,10],
-                 histtype='stepfilled',
-                 normed=True,
-                 color = 'r',
-                 alpha = 0.25,
-                 label="junction entropy")
-
     plt.xlabel("Entropy Score")
-    plt.ylabel("Probability")
+    plt.ylabel("Density")
     plt.legend()
 
     fig.savefig("%s_junction_entropy_distribution.png" % output_name)
